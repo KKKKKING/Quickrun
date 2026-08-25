@@ -241,7 +241,7 @@ private struct ActionTile: View {
 
             // Port badge
             if let port = action.port {
-                Text(":\(port)")
+                Text(verbatim: ":\(port)")
                     .font(.system(size: 10, design: .monospaced))
                     .padding(.horizontal, 5).padding(.vertical, 2)
                     .background(Capsule().fill(Color(NSColor.quaternaryLabelColor)))

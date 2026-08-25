@@ -324,7 +324,7 @@ private struct ActionTile: View {
                     .frame(maxWidth: .infinity)
 
                 if let port = action.port {
-                    Text(":\(port)")
+                    Text(verbatim: ":\(port)")
                         .font(.system(size: 9, design: .monospaced))
                         .padding(.horizontal, 5).padding(.vertical, 1)
                         .background(Capsule().fill(Color(NSColor.quaternaryLabelColor)))
@@ -372,7 +372,7 @@ private struct ActionListRow: View {
                 .lineLimit(1)
 
             if let port = action.port {
-                Text(":\(port)")
+                Text(verbatim: ":\(port)")
                     .font(.system(.caption2, design: .monospaced))
                     .foregroundStyle(.secondary)
                     .padding(.horizontal, 4).padding(.vertical, 1)

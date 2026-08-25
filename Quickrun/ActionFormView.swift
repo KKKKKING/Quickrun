@@ -224,20 +224,20 @@ struct ActionFormView: View {
                         .foregroundStyle(.secondary)
                 }
 
-                // Port + timeout
-                HStack(alignment: .top, spacing: 16) {
+                // Port + timeout — two equal-width columns filling the row
+                HStack(spacing: 12) {
                     VStack(alignment: .leading, spacing: 4) {
                         fieldLabel(l10n.t(.portLabel))
                         TextField("3000", text: $portText)
                             .textFieldStyle(.roundedBorder)
-                            .frame(maxWidth: 120)
                     }
+                    .frame(maxWidth: .infinity, alignment: .leading)
                     VStack(alignment: .leading, spacing: 4) {
                         fieldLabel(l10n.t(.timeoutLabel))
                         TextField(l10n.t(.timeoutPlaceholder), text: $timeoutText)
                             .textFieldStyle(.roundedBorder)
-                            .frame(maxWidth: 200)
                     }
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 }
             }
         }
