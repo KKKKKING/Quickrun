@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+  <defs>
+    <mask id="bolt-cutout">
+      <rect width="20" height="20" fill="#fff"/>
+      <path fill="#000" stroke="#000" stroke-linejoin="round" stroke-width="1.2" d="m14 1.2-5 9.2h3.6l-1.1 8.4 7-11.1h-4.1z"/>
+    </mask>
+  </defs>
+  <g fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.7" mask="url(#bolt-cutout)">
+    <rect x="1.5" y="3.7" width="13.2" height="12.6" rx="2.4"/>
+    <path d="M4.1 7.4 6.7 10l-2.6 2.6M7.8 12.6h2.2"/>
+  </g>
+  <path fill="#000" d="m14 1.2-5 9.2h3.6l-1.1 8.4 7-11.1h-4.1z"/>
+</svg>

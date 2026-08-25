@@ -83,18 +83,7 @@ struct ActionFormView: View {
 
                 VStack(alignment: .leading, spacing: 4) {
                     fieldLabel(l10n.t(.workspaceLabel))
-                    Picker("", selection: $workspaceId) {
-                        Text(l10n.t(.none)).tag(UUID?.none)
-                        ForEach(workspaceStore.workspaces) { ws in
-                            HStack {
-                                Circle().fill(ws.color.color).frame(width: 8, height: 8)
-                                Text(ws.name)
-                            }
-                            .tag(Optional(ws.id))
-                        }
-                    }
-                    .labelsHidden()
-                    .frame(maxWidth: 220)
+                    workspacePicker
                 }
             }
         }
@@ -249,6 +238,72 @@ struct ActionFormView: View {
         Text(text)
             .font(.subheadline)
             .foregroundStyle(.secondary)
+    }
+
+    /// Full-width menu styled like the form's other input fields.
+    private var workspacePicker: some View {
+        Menu {
+            Button {
+                workspaceId = nil
+            } label: {
+                if workspaceId == nil {
+                    Label(l10n.t(.none), systemImage: "checkmark")
+                } else {
+                    Text(l10n.t(.none))
+                }
+            }
+
+            if !workspaceStore.workspaces.isEmpty {
+                Divider()
+            }
+
+            ForEach(workspaceStore.workspaces) { workspace in
+                Button {
+                    workspaceId = workspace.id
+                } label: {
+                    if workspaceId == workspace.id {
+                        Label(workspace.name, systemImage: "checkmark")
+                    } else {
+                        Text(workspace.name)
+                    }
+                }
+            }
+        } label: {
+            HStack(spacing: 8) {
+                if let workspace = workspaceStore.workspace(for: workspaceId) {
+                    Circle()
+                        .fill(workspace.color.color)
+                        .frame(width: 8, height: 8)
+                    Text(workspace.name)
+                        .lineLimit(1)
+                } else {
+                    Text(l10n.t(.none))
+                        .lineLimit(1)
+                }
+
+                Spacer(minLength: 8)
+
+                Image(systemName: "chevron.up.chevron.down")
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(.secondary)
+            }
+            .padding(.horizontal, 8)
+            .frame(maxWidth: .infinity, minHeight: 22, alignment: .leading)
+            .background {
+                RoundedRectangle(cornerRadius: 5)
+                    .fill(Color(NSColor.textBackgroundColor))
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 5)
+                            .strokeBorder(Color(NSColor.separatorColor), lineWidth: 1)
+                    }
+            }
+            .contentShape(Rectangle())
+        }
+        .menuStyle(.borderlessButton)
+        .menuIndicator(.hidden)
+        .buttonStyle(.plain)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .accessibilityLabel(l10n.t(.workspaceLabel))
     }
 
     /// Opens an NSOpenPanel to let the user pick a directory.
