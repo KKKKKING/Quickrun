@@ -239,6 +239,15 @@ private struct ActionTile: View {
 
             Spacer()
 
+            // Port badge
+            if let port = action.port {
+                Text(":\(port)")
+                    .font(.system(size: 10, design: .monospaced))
+                    .padding(.horizontal, 5).padding(.vertical, 2)
+                    .background(Capsule().fill(Color(NSColor.quaternaryLabelColor)))
+                    .foregroundStyle(.secondary)
+            }
+
             // Shell badge
             Text(action.shell.label)
                 .font(.system(size: 10, design: .monospaced))

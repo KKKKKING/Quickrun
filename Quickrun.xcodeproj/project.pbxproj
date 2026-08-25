@@ -26,6 +26,7 @@
 		AA0000000000000000000042 /* WorkspacesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000043 /* WorkspacesView.swift */; };
 		AA0000000000000000000044 /* TrashView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000045 /* TrashView.swift */; };
 		AA0000000000000000000047 /* Localization.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000046 /* Localization.swift */; };
+		AA0000000000000000000049 /* ShellEnvironmentLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000048 /* ShellEnvironmentLoader.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -51,6 +52,7 @@
 		AA0000000000000000000043 /* WorkspacesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkspacesView.swift; sourceTree = "<group>"; };
 		AA0000000000000000000045 /* TrashView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrashView.swift; sourceTree = "<group>"; };
 		AA0000000000000000000046 /* Localization.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Localization.swift; sourceTree = "<group>"; };
+		AA0000000000000000000048 /* ShellEnvironmentLoader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShellEnvironmentLoader.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -85,6 +87,7 @@
 				AA0000000000000000000043 /* WorkspacesView.swift */,
 				AA0000000000000000000045 /* TrashView.swift */,
 				AA0000000000000000000046 /* Localization.swift */,
+				AA0000000000000000000048 /* ShellEnvironmentLoader.swift */,
 				AA000000000000000000001D /* Info.plist */,
 				AA0000000000000000000030 /* Quickrun.entitlements */,
 				AA000000000000000000001F /* Assets.xcassets */,
@@ -195,6 +198,7 @@
 				AA0000000000000000000042 /* WorkspacesView.swift in Sources */,
 				AA0000000000000000000044 /* TrashView.swift in Sources */,
 				AA0000000000000000000047 /* Localization.swift in Sources */,
+				AA0000000000000000000049 /* ShellEnvironmentLoader.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

@@ -114,7 +114,7 @@ struct SettingsView: View {
                             .foregroundStyle(.secondary)
                             .font(.subheadline)
 
-                            Link(destination: URL(string: "https://github.com/duboisqpro/quickrun")!) {
+                            Link(destination: URL(string: "https://github.com/KKKKKING/Quickrun")!) {
                                 Label("GitHub", systemImage: "arrow.up.right.square")
                                     .font(.subheadline)
                             }

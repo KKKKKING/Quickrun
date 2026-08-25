@@ -323,7 +323,13 @@ private struct ActionTile: View {
                     .multilineTextAlignment(.center)
                     .frame(maxWidth: .infinity)
 
-
+                if let port = action.port {
+                    Text(":\(port)")
+                        .font(.system(size: 9, design: .monospaced))
+                        .padding(.horizontal, 5).padding(.vertical, 1)
+                        .background(Capsule().fill(Color(NSColor.quaternaryLabelColor)))
+                        .foregroundStyle(.secondary)
+                }
             }
             .padding(.vertical, 8)
             .padding(.horizontal, 6)
@@ -364,6 +370,14 @@ private struct ActionListRow: View {
                 .font(.caption)
                 .fontWeight(.medium)
                 .lineLimit(1)
+
+            if let port = action.port {
+                Text(":\(port)")
+                    .font(.system(.caption2, design: .monospaced))
+                    .foregroundStyle(.secondary)
+                    .padding(.horizontal, 4).padding(.vertical, 1)
+                    .background(Capsule().fill(Color(NSColor.quaternaryLabelColor)))
+            }
 
             Spacer()
 

@@ -56,6 +56,15 @@ enum Shell: String, Codable, CaseIterable, Identifiable {
     var id: String { rawValue }
     var label: String { rawValue }
     var executablePath: String { "/bin/\(rawValue)" }
+
+    /// The user's login shell (via getpwuid), mapped to a supported Shell.
+    /// Used as the default for new actions — GUI apps can't trust $SHELL.
+    static var loginDefault: Shell {
+        guard let pw = getpwuid(getuid()),
+              let shellPath = pw.pointee.pw_shell
+        else { return .zsh }
+        return String(cString: shellPath).hasSuffix("zsh") ? .zsh : .bash
+    }
 }
 
 // MARK: - Action
@@ -69,6 +78,9 @@ struct Action: Identifiable, Codable, Hashable {
     /// Optional script executed when the action is stopped.
     /// nil/empty = simply send SIGTERM to the running process.
     var stopCommand: String? = nil
+    /// Optional port the script listens on (e.g. a dev server).
+    /// Purely informational — shown as a badge in the panel and action tiles.
+    var port: Int? = nil
     /// Shell used to execute the command.
     var shell: Shell = .bash
     /// Optional workspace this action belongs to.
@@ -85,6 +97,7 @@ struct Action: Identifiable, Codable, Hashable {
         name: String,
         command: String,
         stopCommand: String? = nil,
+        port: Int? = nil,
         workspaceId: UUID? = nil,
         usesShellProfile: Bool = false,
         workingDirectory: String? = nil,
@@ -94,6 +107,7 @@ struct Action: Identifiable, Codable, Hashable {
         self.name             = name
         self.command          = command
         self.stopCommand      = stopCommand
+        self.port             = port
         self.workspaceId      = workspaceId
         self.usesShellProfile = usesShellProfile
         self.workingDirectory = workingDirectory

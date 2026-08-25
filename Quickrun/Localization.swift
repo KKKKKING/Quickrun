@@ -100,8 +100,9 @@ enum L10nKey {
     // Action form
     case editActionTitle, actionSection, nameLabel, namePlaceholder, workspaceLabel
     case scriptSection, contentLabel, contentHint, shellLabel
-    case loadShellProfile, bashProfileHint, zshProfileHint
+    case loadShellProfile, shellProfileHint
     case stopCommandLabel, stopCommandHint
+    case portLabel
     case optionsSection, workingDirectory, workingDirectoryPlaceholder, chooseFolder, clearHint
     case envVars, envHint, timeoutLabel, timeoutPlaceholder
     case chooseWorkingDirectory, choosePrompt
@@ -224,11 +225,11 @@ enum L10n {
         .scriptSection: "Script", .contentLabel: "Content",
         .contentHint: "Full shell script — supports shebang, functions, multiline pipelines, etc.",
         .shellLabel: "Shell",
-        .loadShellProfile: "Load shell profile",
-        .bashProfileHint: "Sources ~/.bash_profile and ~/.bashrc. Enables alias expansion.",
-        .zshProfileHint: "Sources ~/.zprofile, ~/.zshrc and ~/.bash_profile.",
+        .loadShellProfile: "Load shell environment",
+        .shellProfileHint: "Loads your login shell environment (PATH, Node, Python, Homebrew, nvm, pyenv, …) before running the script.",
         .stopCommandLabel: "Stop command (optional)",
         .stopCommandHint: "Executed when the action is stopped. Leave empty to simply send SIGTERM to the process.",
+        .portLabel: "Port (optional)",
         .optionsSection: "Options",
         .workingDirectory: "Working directory",
         .workingDirectoryPlaceholder: "Default (inherits app directory)",
@@ -348,11 +349,11 @@ enum L10n {
         .scriptSection: "脚本", .contentLabel: "内容",
         .contentHint: "完整的 Shell 脚本 —— 支持 shebang、函数、多行管道等。",
         .shellLabel: "Shell",
-        .loadShellProfile: "加载 Shell 配置文件",
-        .bashProfileHint: "加载 ~/.bash_profile 和 ~/.bashrc，并启用别名扩展。",
-        .zshProfileHint: "加载 ~/.zprofile、~/.zshrc 和 ~/.bash_profile。",
+        .loadShellProfile: "加载 Shell 环境",
+        .shellProfileHint: "运行脚本前继承登录 Shell 环境（PATH、Node、Python、Homebrew、nvm、pyenv 等）。",
         .stopCommandLabel: "停止命令（可选）",
         .stopCommandHint: "点击停止时执行该命令。留空则直接向进程发送 SIGTERM 信号。",
+        .portLabel: "端口（可选）",
         .optionsSection: "选项",
         .workingDirectory: "工作目录",
         .workingDirectoryPlaceholder: "默认（继承应用目录）",

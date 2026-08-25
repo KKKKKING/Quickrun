@@ -23,6 +23,12 @@ class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
         setupStatusItem()
         setupPopover()
 
+        // Pre-warm the shell-environment cache in the background so the first
+        // script run doesn't stall on shell startup (oh-my-zsh can be slow).
+        DispatchQueue.global(qos: .utility).async {
+            ShellEnvironmentLoader.preload(shells: Shell.allCases)
+        }
+
         // Attach the hide-delegate as soon as the main window first appears.
         NotificationCenter.default.addObserver(
             self,

@@ -19,11 +19,12 @@ struct ActionFormView: View {
     @State private var name:              String  = ""
     @State private var command:           String  = ""
     @State private var stopCommand:       String  = ""
-    @State private var shell:             Shell   = .bash
+    @State private var shell:             Shell   = .loginDefault
     @State private var workspaceId:       UUID?   = nil
     @State private var usesShellProfile:  Bool    = true
     @State private var workingDirectory:  String  = ""
     @State private var envText:           String  = ""   // "KEY=VALUE" per line
+    @State private var portText:          String  = ""   // 1...65535, empty = none
     @State private var timeoutText:       String  = ""   // seconds, empty = none
 
     private var title: String {
@@ -157,15 +158,13 @@ struct ActionFormView: View {
                     .frame(maxWidth: 160)
                 }
 
-                // Shell profile toggle
+                // Shell environment toggle
                 VStack(alignment: .leading, spacing: 4) {
                     Toggle(isOn: $usesShellProfile) {
                         VStack(alignment: .leading, spacing: 2) {
                             Text(l10n.t(.loadShellProfile))
                                 .font(.body)
-                            Text(shell == .bash
-                                 ? l10n.t(.bashProfileHint)
-                                 : l10n.t(.zshProfileHint))
+                            Text(l10n.t(.shellProfileHint))
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                         }
@@ -225,12 +224,20 @@ struct ActionFormView: View {
                         .foregroundStyle(.secondary)
                 }
 
-                // Timeout
-                VStack(alignment: .leading, spacing: 4) {
-                    fieldLabel(l10n.t(.timeoutLabel))
-                    TextField(l10n.t(.timeoutPlaceholder), text: $timeoutText)
-                        .textFieldStyle(.roundedBorder)
-                        .frame(maxWidth: 200)
+                // Port + timeout
+                HStack(alignment: .top, spacing: 16) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        fieldLabel(l10n.t(.portLabel))
+                        TextField("3000", text: $portText)
+                            .textFieldStyle(.roundedBorder)
+                            .frame(maxWidth: 120)
+                    }
+                    VStack(alignment: .leading, spacing: 4) {
+                        fieldLabel(l10n.t(.timeoutLabel))
+                        TextField(l10n.t(.timeoutPlaceholder), text: $timeoutText)
+                            .textFieldStyle(.roundedBorder)
+                            .frame(maxWidth: 200)
+                    }
                 }
             }
         }
@@ -278,6 +285,7 @@ struct ActionFormView: View {
             .sorted()
             .joined(separator: "\n")
         timeoutText       = action.timeout.map { String(Int($0)) } ?? ""
+        portText          = action.port.map(String.init) ?? ""
     }
 
     private func saveAndDismiss() {
@@ -317,6 +325,14 @@ struct ActionFormView: View {
 
         let trimTimeout = timeoutText.trimmingCharacters(in: .whitespaces)
         action.timeout  = Double(trimTimeout).flatMap { $0 > 0 ? $0 : nil }
+
+        // Keep only a plausible TCP port; anything else is treated as unset.
+        let trimPort = portText.trimmingCharacters(in: .whitespaces)
+        action.port  = Int(trimPort).flatMap { (1...65535).contains($0) ? $0 : nil }
+
+        // The user may have just edited their shell configuration for this
+        // action — reload the cached shell environment on next run.
+        ShellEnvironmentLoader.invalidateAll()
 
         onSave(action)
         dismiss()

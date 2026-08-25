@@ -26,6 +26,16 @@ final class ProcessRunner {
     }
 
     /// Starts an arbitrary shell command (used for custom stop commands).
+    ///
+    /// Environment strategy — this is the ONLY place environments are resolved
+    /// (unified execution layer):
+    /// - `usesShellProfile == true`  → the user's real login-shell environment
+    ///   (PATH, NVM_DIR, PYENV_ROOT, …), captured by `ShellEnvironmentLoader`.
+    /// - `usesShellProfile == false` → the app's own environment (GUI default).
+    ///
+    /// The script itself always runs as plain `shell -c <command>` — no login /
+    /// interactive wrapper — so the process tree stays exactly:
+    /// Quickrun → shell → script → its children.
     /// - Throws: if the executable cannot be launched.
     func start(
         command: String,
@@ -39,35 +49,16 @@ final class ProcessRunner {
         let errorPipe = Pipe()
 
         proc.executableURL = URL(fileURLWithPath: shell.executablePath)
-
-        if usesShellProfile {
-            switch shell {
-            case .bash:
-                // Non-interactive bash does NOT expand aliases by default and does NOT
-                // source ~/.bashrc automatically (login shell only reads ~/.bash_profile).
-                // Fix: enable alias expansion and source both files explicitly.
-                let preamble = """
-                shopt -s expand_aliases
-                [[ -f ~/.bash_profile ]] && source ~/.bash_profile
-                [[ -f ~/.bashrc ]]       && source ~/.bashrc
-                """
-                proc.arguments = ["-c", "\(preamble)\n\(command)"]
-            case .zsh:
-                // zsh login shell sources ~/.zprofile + ~/.zshrc automatically.
-                // Also source ~/.bash_profile for tools that only write there.
-                let preamble = "[[ -f ~/.bash_profile ]] && source ~/.bash_profile"
-                proc.arguments = ["-l", "-c", "\(preamble)\n\(command)"]
-            }
-        } else {
-            proc.arguments = ["-c", command]
-        }
+        proc.arguments     = ["-c", command]
 
         if let cwd = workingDirectory, !cwd.isEmpty {
             proc.currentDirectoryURL = URL(fileURLWithPath: cwd)
         }
 
-        // Inherit the current environment, then overlay action-specific vars
-        var env = ProcessInfo.processInfo.environment
+        // Base environment (see doc comment), then overlay action-specific vars.
+        var env = usesShellProfile
+            ? ShellEnvironmentLoader.environment(for: shell)
+            : ProcessInfo.processInfo.environment
         for (key, val) in environment { env[key] = val }
         proc.environment = env
 
