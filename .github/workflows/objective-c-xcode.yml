@@ -12,9 +12,11 @@ jobs:
     runs-on: macos-latest
 
     steps:
+      # 1. 拉取源码
       - name: Checkout source
         uses: actions/checkout@v4
 
+      # 2. 编译 Universal App
       - name: Xcode build Universal (arm64 + x86_64)
         run: |
           xcodebuild \
@@ -24,11 +26,61 @@ jobs:
             -derivedDataPath ./build \
             clean build \
             ARCHS="arm64 x86_64" \
+            ONLY_ACTIVE_ARCH=NO \
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_ALLOWED=NO
 
+      # 3. 检查 .app 是否生成成功
+      - name: Verify Quickrun.app
+        run: |
+          APP_PATH="./build/Build/Products/Release/Quickrun.app"
+
+          if [ ! -d "$APP_PATH" ]; then
+            echo "❌ Quickrun.app not found"
+            exit 1
+          fi
+
+          echo "✅ Quickrun.app found"
+
+          echo "===== App Structure ====="
+          ls -la "$APP_PATH"
+          ls -la "$APP_PATH/Contents"
+          ls -la "$APP_PATH/Contents/MacOS"
+
+          echo "===== Executable Architecture ====="
+          EXECUTABLE="$APP_PATH/Contents/MacOS/Quickrun"
+
+          if [ -f "$EXECUTABLE" ]; then
+            file "$EXECUTABLE"
+            lipo -info "$EXECUTABLE" || true
+          else
+            echo "❌ Executable not found: $EXECUTABLE"
+            exit 1
+          fi
+
+      # 4. 使用 macOS ditto 正确打包 .app
+      # 保留 Bundle 目录、权限、资源等
+      - name: Package Quickrun.app
+        run: |
+          APP_PATH="./build/Build/Products/Release/Quickrun.app"
+          OUTPUT_PATH="./build/Quickrun.app.zip"
+
+          ditto \
+            -c \
+            -k \
+            --sequesterRsrc \
+            --keepParent \
+            "$APP_PATH" \
+            "$OUTPUT_PATH"
+
+          echo "===== Package Result ====="
+          ls -lh "$OUTPUT_PATH"
+
+      # 5. 上传构建产物
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
-          name: Quickrun-Universal-App
-          path: ./build/Build/Products/Release/Quickrun.app
+          name: Quickrun-Universal
+          path: ./build/Quickrun.app.zip
+          if-no-files-found: error
+          retention-days: 30
