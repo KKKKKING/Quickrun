@@ -9,6 +9,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
     let actionStore    = ActionStore()
     let runStore       = RunStore()
     let workspaceStore = WorkspaceStore()
+    let languageManager = LanguageManager()
 
     @Published var mainWindowOpenTrigger = 0
 
@@ -81,6 +82,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
                 .environmentObject(actionStore)
                 .environmentObject(runStore)
                 .environmentObject(workspaceStore)
+                .environmentObject(languageManager)
         )
         hosting.sizingOptions = .preferredContentSize
         popover.contentViewController = hosting

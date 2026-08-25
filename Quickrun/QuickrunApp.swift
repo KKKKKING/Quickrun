@@ -36,6 +36,7 @@ struct QuickrunApp: App {
                 .environmentObject(appDelegate.actionStore)
                 .environmentObject(appDelegate.runStore)
                 .environmentObject(appDelegate.workspaceStore)
+                .environmentObject(appDelegate.languageManager)
                 .preferredColorScheme(theme.colorScheme)
                 .frame(minWidth: 700, minHeight: 500)
         }

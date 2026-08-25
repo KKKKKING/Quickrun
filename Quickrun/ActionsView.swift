@@ -5,6 +5,7 @@ struct ActionsView: View {
     @EnvironmentObject var actionStore:    ActionStore
     @EnvironmentObject var runStore:       RunStore
     @EnvironmentObject var workspaceStore: WorkspaceStore
+    @EnvironmentObject var l10n:           LanguageManager
 
     @State private var filterWorkspaceId: UUID?   = nil
     @State private var isCreating                 = false
@@ -47,18 +48,18 @@ struct ActionsView: View {
             }
         }
         .confirmationDialog(
-            "Delete \"\(actionToTrash?.name ?? "")\"?",
+            l10n.f(.deleteActionTitle, actionToTrash?.name ?? ""),
             isPresented: $showTrashAlert,
             titleVisibility: .visible
         ) {
-            Button("Move to Trash", role: .destructive) {
+            Button(l10n.t(.moveToTrash), role: .destructive) {
                 guard let action = actionToTrash else { return }
                 if runStore.isRunning(actionId: action.id) { runStore.toggle(action: action) }
                 actionStore.trash(action)
             }
-            Button("Cancel", role: .cancel) {}
+            Button(l10n.t(.cancel), role: .cancel) {}
         } message: {
-            Text("The action will be moved to the trash. You can restore it later.")
+            Text(l10n.t(.trashMessage))
         }
     }
 
@@ -69,10 +70,10 @@ struct ActionsView: View {
             Image(systemName: "bolt.fill")
                 .foregroundStyle(Color.accentColor)
                 .font(.title2)
-            Text("Actions").font(.title2).bold()
+            Text(l10n.t(.tabActions)).font(.title2).bold()
             Spacer()
             Button { isCreating = true } label: {
-                Label("New Action", systemImage: "plus")
+                Label(l10n.t(.newAction), systemImage: "plus")
             }
             .buttonStyle(.borderedProminent)
         }
@@ -87,7 +88,7 @@ struct ActionsView: View {
         if !workspaceStore.workspaces.isEmpty {
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 6) {
-                    filterChip(label: "All", color: nil, active: filterWorkspaceId == nil) {
+                    filterChip(label: l10n.t(.all), color: nil, active: filterWorkspaceId == nil) {
                         filterWorkspaceId = nil
                     }
                     ForEach(workspaceStore.workspaces) { ws in
@@ -124,11 +125,11 @@ struct ActionsView: View {
             VStack(spacing: 12) {
                 Image(systemName: "play.rectangle")
                     .font(.system(size: 48)).foregroundStyle(.secondary)
-                Text(actionStore.actions.isEmpty ? "No Actions" : "No actions in this workspace")
+                Text(actionStore.actions.isEmpty ? l10n.t(.noActions) : l10n.t(.noActionsInWorkspace))
                     .font(.title3).bold()
                 Text(actionStore.actions.isEmpty
-                     ? "Tap \"New Action\" to add a script or command."
-                     : "Switch filter or create an action in this workspace.")
+                     ? l10n.t(.noActionsHint)
+                     : l10n.t(.noWorkspaceActionsHint))
                     .foregroundStyle(.secondary)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -174,6 +175,7 @@ private struct ActionTile: View {
     let onLogs:       () -> Void
 
     @EnvironmentObject var runStore: RunStore
+    @EnvironmentObject var l10n:     LanguageManager
 
     private var isRunning: Bool { runStore.isRunning(actionId: action.id) }
 
@@ -231,7 +233,7 @@ private struct ActionTile: View {
             Circle()
                 .fill(isRunning ? Color.green : Color.red.opacity(0.6))
                 .frame(width: 9, height: 9)
-            Text(isRunning ? "Running" : "Idle")
+            Text(isRunning ? l10n.t(.statusRunning) : l10n.t(.statusIdle))
                 .font(.caption2)
                 .foregroundStyle(isRunning ? Color.green : Color.secondary)
 
@@ -251,7 +253,7 @@ private struct ActionTile: View {
                     .font(.system(size: 15))
             }
             .buttonStyle(.plain)
-            .help("Delete action")
+            .help(l10n.t(.deleteActionHelp))
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
@@ -281,10 +283,10 @@ private struct ActionTile: View {
             HStack(spacing: 4) {
                 if let run = lastRun {
                     Circle().fill(run.status.color).frame(width: 5, height: 5)
-                    Text("Last run \(run.startedAt.shortLabel) — \(run.status.label)")
+                    Text(l10n.f(.lastRun, run.startedAt.shortLabel, run.status.label))
                 } else {
                     Circle().fill(Color.secondary.opacity(0.4)).frame(width: 5, height: 5)
-                    Text("Never run")
+                    Text(l10n.t(.neverRun))
                 }
             }
             .font(.caption2)
@@ -303,7 +305,7 @@ private struct ActionTile: View {
             Button {
                 runStore.toggle(action: action)
             } label: {
-                Label(isRunning ? "Stop" : "Run",
+                Label(isRunning ? l10n.t(.stop) : l10n.t(.run),
                       systemImage: isRunning ? "stop.fill" : "play.fill")
                     .frame(maxWidth: .infinity)
             }
@@ -313,19 +315,19 @@ private struct ActionTile: View {
 
             // Edit
             Button { onEdit() } label: {
-                Label("Edit", systemImage: "pencil")
+                Label(l10n.t(.edit), systemImage: "pencil")
             }
             .buttonStyle(.bordered)
             .controlSize(.small)
-            .help("Edit action")
+            .help(l10n.t(.editActionHelp))
 
             // Logs
             Button { onLogs() } label: {
-                Label("Logs", systemImage: "text.alignleft")
+                Label(l10n.t(.logs), systemImage: "text.alignleft")
             }
             .buttonStyle(.bordered)
             .controlSize(.small)
-            .help("View logs")
+            .help(l10n.t(.viewLogsHelp))
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
@@ -339,6 +341,7 @@ struct ActionLogSheet: View {
     let action: Action
 
     @EnvironmentObject var runStore: RunStore
+    @EnvironmentObject var l10n:     LanguageManager
     @Environment(\.dismiss) private var dismiss
 
     @State private var selectedRunId: UUID?
@@ -356,12 +359,12 @@ struct ActionLogSheet: View {
             // Header
             HStack {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Logs — \(action.name)").font(.title2).bold()
-                    Text("\(actionRuns.count) run\(actionRuns.count == 1 ? "" : "s")")
+                    Text(l10n.f(.logsFor, action.name)).font(.title2).bold()
+                    Text(l10n.runsCount(actionRuns.count))
                         .font(.caption).foregroundStyle(.secondary)
                 }
                 Spacer()
-                Button("Done") { dismiss() }
+                Button(l10n.t(.done)) { dismiss() }
                     .keyboardShortcut(.escape)
             }
             .padding(20)
@@ -372,7 +375,7 @@ struct ActionLogSheet: View {
                 VStack(spacing: 10) {
                     Image(systemName: "clock")
                         .font(.system(size: 36)).foregroundStyle(.secondary)
-                    Text("No runs yet for this action.")
+                    Text(l10n.t(.noRunsForAction))
                         .foregroundStyle(.secondary)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)

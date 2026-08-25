@@ -13,10 +13,12 @@ struct ActionFormView: View {
     let onSave:             (Action) -> Void
 
     @EnvironmentObject var workspaceStore: WorkspaceStore
+    @EnvironmentObject var l10n: LanguageManager
     @Environment(\.dismiss) private var dismiss
 
     @State private var name:              String  = ""
     @State private var command:           String  = ""
+    @State private var stopCommand:       String  = ""
     @State private var shell:             Shell   = .bash
     @State private var workspaceId:       UUID?   = nil
     @State private var usesShellProfile:  Bool    = true
@@ -26,8 +28,8 @@ struct ActionFormView: View {
 
     private var title: String {
         switch mode {
-        case .create: return "New Action"
-        case .edit:   return "Edit Action"
+        case .create: return l10n.t(.newAction)
+        case .edit:   return l10n.t(.editActionTitle)
         }
     }
 
@@ -59,9 +61,9 @@ struct ActionFormView: View {
         HStack {
             Text(title).font(.title2).bold()
             Spacer()
-            Button("Cancel") { dismiss() }
+            Button(l10n.t(.cancel)) { dismiss() }
                 .keyboardShortcut(.escape)
-            Button("Save") { saveAndDismiss() }
+            Button(l10n.t(.save)) { saveAndDismiss() }
                 .buttonStyle(.borderedProminent)
                 .disabled(!isValid)
                 .keyboardShortcut(.return, modifiers: .command)
@@ -70,18 +72,18 @@ struct ActionFormView: View {
     }
 
     private var basicSection: some View {
-        FormSection(title: "Action") {
+        FormSection(title: l10n.t(.actionSection)) {
             VStack(alignment: .leading, spacing: 12) {
                 VStack(alignment: .leading, spacing: 4) {
-                    fieldLabel("Name")
-                    TextField("e.g. Start dev server", text: $name)
+                    fieldLabel(l10n.t(.nameLabel))
+                    TextField(l10n.t(.namePlaceholder), text: $name)
                         .textFieldStyle(.roundedBorder)
                 }
 
                 VStack(alignment: .leading, spacing: 4) {
-                    fieldLabel("Workspace")
+                    fieldLabel(l10n.t(.workspaceLabel))
                     Picker("", selection: $workspaceId) {
-                        Text("None").tag(UUID?.none)
+                        Text(l10n.t(.none)).tag(UUID?.none)
                         ForEach(workspaceStore.workspaces) { ws in
                             HStack {
                                 Circle().fill(ws.color.color).frame(width: 8, height: 8)
@@ -98,11 +100,11 @@ struct ActionFormView: View {
     }
 
     private var scriptSection: some View {
-        FormSection(title: "Script") {
+        FormSection(title: l10n.t(.scriptSection)) {
             VStack(alignment: .leading, spacing: 12) {
                 // Multiline script editor
                 VStack(alignment: .leading, spacing: 4) {
-                    fieldLabel("Content")
+                    fieldLabel(l10n.t(.contentLabel))
                     ZStack(alignment: .topLeading) {
                         RoundedRectangle(cornerRadius: 6)
                             .strokeBorder(Color(NSColor.separatorColor), lineWidth: 1)
@@ -116,14 +118,35 @@ struct ActionFormView: View {
                             .padding(6)
                     }
                     .frame(minHeight: 180)
-                    Text("Full shell script — supports shebang, functions, multiline pipelines, etc.")
+                    Text(l10n.t(.contentHint))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+
+                // Stop command editor
+                VStack(alignment: .leading, spacing: 4) {
+                    fieldLabel(l10n.t(.stopCommandLabel))
+                    ZStack(alignment: .topLeading) {
+                        RoundedRectangle(cornerRadius: 6)
+                            .strokeBorder(Color(NSColor.separatorColor), lineWidth: 1)
+                            .background(
+                                RoundedRectangle(cornerRadius: 6)
+                                    .fill(Color(NSColor.textBackgroundColor))
+                            )
+                        TextEditor(text: $stopCommand)
+                            .font(.system(.body, design: .monospaced))
+                            .scrollContentBackground(.hidden)
+                            .padding(6)
+                    }
+                    .frame(minHeight: 56)
+                    Text(l10n.t(.stopCommandHint))
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
 
                 // Shell picker
                 VStack(alignment: .leading, spacing: 4) {
-                    fieldLabel("Shell")
+                    fieldLabel(l10n.t(.shellLabel))
                     Picker("", selection: $shell) {
                         ForEach(Shell.allCases) { s in
                             Text(s.label).tag(s)
@@ -138,11 +161,11 @@ struct ActionFormView: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Toggle(isOn: $usesShellProfile) {
                         VStack(alignment: .leading, spacing: 2) {
-                            Text("Load shell profile")
+                            Text(l10n.t(.loadShellProfile))
                                 .font(.body)
                             Text(shell == .bash
-                                 ? "Sources ~/.bash_profile and ~/.bashrc. Enables alias expansion."
-                                 : "Sources ~/.zprofile, ~/.zshrc and ~/.bash_profile.")
+                                 ? l10n.t(.bashProfileHint)
+                                 : l10n.t(.zshProfileHint))
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                         }
@@ -153,13 +176,13 @@ struct ActionFormView: View {
     }
 
     private var optionalSection: some View {
-        FormSection(title: "Options") {
+        FormSection(title: l10n.t(.optionsSection)) {
             VStack(alignment: .leading, spacing: 12) {
                 // Working directory picker
                 VStack(alignment: .leading, spacing: 4) {
-                    fieldLabel("Working directory")
+                    fieldLabel(l10n.t(.workingDirectory))
                     HStack(spacing: 8) {
-                        TextField("Default (inherits app directory)", text: $workingDirectory)
+                        TextField(l10n.t(.workingDirectoryPlaceholder), text: $workingDirectory)
                             .textFieldStyle(.roundedBorder)
                             .font(.system(.body, design: .monospaced))
                         Button {
@@ -167,7 +190,7 @@ struct ActionFormView: View {
                         } label: {
                             Image(systemName: "folder")
                         }
-                        .help("Choose folder…")
+                        .help(l10n.t(.chooseFolder))
                         if !workingDirectory.isEmpty {
                             Button {
                                 workingDirectory = ""
@@ -176,14 +199,14 @@ struct ActionFormView: View {
                                     .foregroundStyle(.secondary)
                             }
                             .buttonStyle(.plain)
-                            .help("Clear")
+                            .help(l10n.t(.clearHint))
                         }
                     }
                 }
 
                 // Environment variables
                 VStack(alignment: .leading, spacing: 4) {
-                    fieldLabel("Environment variables")
+                    fieldLabel(l10n.t(.envVars))
                     ZStack(alignment: .topLeading) {
                         RoundedRectangle(cornerRadius: 6)
                             .strokeBorder(Color(NSColor.separatorColor), lineWidth: 1)
@@ -197,15 +220,15 @@ struct ActionFormView: View {
                             .padding(6)
                     }
                     .frame(minHeight: 72)
-                    Text("One KEY=VALUE per line.")
+                    Text(l10n.t(.envHint))
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
 
                 // Timeout
                 VStack(alignment: .leading, spacing: 4) {
-                    fieldLabel("Timeout (seconds)")
-                    TextField("Empty = no timeout", text: $timeoutText)
+                    fieldLabel(l10n.t(.timeoutLabel))
+                    TextField(l10n.t(.timeoutPlaceholder), text: $timeoutText)
                         .textFieldStyle(.roundedBorder)
                         .frame(maxWidth: 200)
                 }
@@ -227,8 +250,8 @@ struct ActionFormView: View {
         panel.canChooseFiles         = false
         panel.canChooseDirectories   = true
         panel.allowsMultipleSelection = false
-        panel.title = "Choose Working Directory"
-        panel.prompt = "Choose"
+        panel.title = l10n.t(.chooseWorkingDirectory)
+        panel.prompt = l10n.t(.choosePrompt)
         if !workingDirectory.isEmpty {
             panel.directoryURL = URL(fileURLWithPath: workingDirectory)
         }
@@ -245,6 +268,7 @@ struct ActionFormView: View {
         guard case .edit(let action) = mode else { return }
         name              = action.name
         command           = action.command
+        stopCommand       = action.stopCommand ?? ""
         shell             = action.shell
         workspaceId       = action.workspaceId
         usesShellProfile  = action.usesShellProfile
@@ -259,6 +283,7 @@ struct ActionFormView: View {
     private func saveAndDismiss() {
         let trimName    = name.trimmingCharacters(in: .whitespaces)
         let trimCwd     = workingDirectory.trimmingCharacters(in: .whitespaces)
+        let trimStop    = stopCommand.trimmingCharacters(in: .whitespacesAndNewlines)
 
         var action: Action
         switch mode {
@@ -271,6 +296,7 @@ struct ActionFormView: View {
         }
 
         action.shell            = shell
+        action.stopCommand      = trimStop.isEmpty ? nil : trimStop
         action.workspaceId      = workspaceId
         action.usesShellProfile = usesShellProfile
         action.workingDirectory = trimCwd.isEmpty ? nil : trimCwd

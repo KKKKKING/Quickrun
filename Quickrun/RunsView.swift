@@ -3,6 +3,7 @@ import SwiftUI
 /// Shows the history of runs with a log viewer for the selected run.
 struct RunsView: View {
     @EnvironmentObject var runStore: RunStore
+    @EnvironmentObject var l10n:     LanguageManager
 
     @State private var selectedRunId: UUID?
 
@@ -27,11 +28,11 @@ struct RunsView: View {
     private var runsList: some View {
         VStack(spacing: 0) {
             HStack {
-                Text("Runs")
+                Text(l10n.t(.runsTitle))
                     .font(.title2).bold()
                 Spacer()
                 if !runStore.runs.isEmpty {
-                    Button("Clear") { runStore.clearFinished() }
+                    Button(l10n.t(.clear)) { runStore.clearFinished() }
                         .buttonStyle(.plain)
                         .foregroundStyle(.secondary)
                         .font(.subheadline)
@@ -47,9 +48,9 @@ struct RunsView: View {
                     Image(systemName: "clock")
                         .font(.system(size: 40))
                         .foregroundStyle(.secondary)
-                    Text("No Runs Yet")
+                    Text(l10n.t(.noRunsTitle))
                         .font(.title3).bold()
-                    Text("Run an action to see its history here.")
+                    Text(l10n.t(.noRunsHint))
                         .foregroundStyle(.secondary)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -86,7 +87,7 @@ struct RunsView: View {
                 Spacer()
                 StatusBadge(status: run.status)
             } else {
-                Text("Select a run to view its logs")
+                Text(l10n.t(.selectRunHint))
                     .foregroundStyle(.secondary)
             }
         }
@@ -99,6 +100,8 @@ struct RunsView: View {
 
 private struct RunRowView: View {
     let run: Run
+
+    @EnvironmentObject var l10n: LanguageManager
 
     var body: some View {
         HStack(spacing: 8) {
@@ -129,6 +132,8 @@ private struct RunRowView: View {
 
 private struct StatusBadge: View {
     let status: RunStatus
+
+    @EnvironmentObject var l10n: LanguageManager
 
     var body: some View {
         Text(status.label)

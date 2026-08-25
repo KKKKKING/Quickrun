@@ -5,6 +5,7 @@ struct MainWindowView: View {
     @EnvironmentObject var actionStore:    ActionStore
     @EnvironmentObject var runStore:       RunStore
     @EnvironmentObject var workspaceStore: WorkspaceStore
+    @EnvironmentObject var l10n:           LanguageManager
 
     enum Tab: String, CaseIterable, Identifiable {
         case workspaces = "Workspaces"
@@ -14,6 +15,16 @@ struct MainWindowView: View {
         case settings   = "Settings"
 
         var id: String { rawValue }
+
+        var titleKey: L10nKey {
+            switch self {
+            case .workspaces: return .tabWorkspaces
+            case .actions:    return .tabActions
+            case .runs:       return .tabRuns
+            case .trash:      return .tabTrash
+            case .settings:   return .tabSettings
+            }
+        }
 
         var icon: String {
             switch self {
@@ -32,7 +43,7 @@ struct MainWindowView: View {
     var body: some View {
         NavigationSplitView {
             List(Tab.allCases, selection: $selectedTab) { tab in
-                Label(tab.rawValue, systemImage: tab.icon)
+                Label(l10n.t(tab.titleKey), systemImage: tab.icon)
                     .tag(tab)
             }
             .navigationSplitViewColumnWidth(min: 155, ideal: 175)
@@ -40,7 +51,7 @@ struct MainWindowView: View {
                 Button(role: .destructive) {
                     showQuitConfirm = true
                 } label: {
-                    Label("Quit Quickrun", systemImage: "power")
+                    Label(l10n.t(.quitQuickrun), systemImage: "power")
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .foregroundStyle(.red)
                 }
@@ -49,19 +60,19 @@ struct MainWindowView: View {
                 .padding(.vertical, 12)
             }
             .confirmationDialog(
-                "Quit Quickrun?",
+                l10n.t(.quitConfirm),
                 isPresented: $showQuitConfirm,
                 titleVisibility: .visible
             ) {
-                Button("Quit", role: .destructive) {
+                Button(l10n.t(.quit), role: .destructive) {
                     runStore.stopAll()
                     NSApp.terminate(nil)
                 }
-                Button("Cancel", role: .cancel) {}
+                Button(l10n.t(.cancel), role: .cancel) {}
             } message: {
                 Text(runStore.runs.filter { $0.status == .running }.isEmpty
-                     ? "The app will close."
-                     : "All running scripts will be stopped before closing.")
+                     ? l10n.t(.quitMessageNoRuns)
+                     : l10n.t(.quitMessageRunning))
             }
         } detail: {
             Group {

@@ -7,9 +7,15 @@ struct PanelView: View {
     @EnvironmentObject var actionStore:    ActionStore
     @EnvironmentObject var runStore:       RunStore
     @EnvironmentObject var workspaceStore: WorkspaceStore
+    @EnvironmentObject var l10n:           LanguageManager
 
     /// "all" or a UUID string — persisted so the filter survives panel close.
     @AppStorage("panelWorkspaceFilter") private var filterRaw: String = "all"
+
+    /// Cards grid or compact list — configurable in Settings.
+    @AppStorage(SettingsKey.panelStyle)    private var panelStyle: PanelStyle = .cards
+    /// Whether the Logs section is shown at the bottom of the panel.
+    @AppStorage(SettingsKey.panelShowLogs) private var showLogs: Bool = true
 
     /// The run whose log is currently expanded in the Logs section.
     @State private var expandedRunId: UUID?
@@ -21,15 +27,27 @@ struct PanelView: View {
         return actionStore.actions.filter { $0.workspaceId == id }
     }
 
+    /// The workspace currently selected in the filter bar, if any.
+    private var selectedWorkspace: Workspace? {
+        guard filterRaw != "all" else { return nil }
+        return UUID(uuidString: filterRaw).flatMap { workspaceStore.workspace(for: $0) }
+    }
+
     var body: some View {
         VStack(spacing: 0) {
             headerBar
             Divider()
             workspaceFilter
             Divider()
-            actionsGrid
-            Divider()
-            logsSection
+            if selectedWorkspace != nil && !filteredActions.isEmpty {
+                groupBar
+                Divider()
+            }
+            actionsContent
+            if showLogs {
+                Divider()
+                logsSection
+            }
         }
         .frame(width: 320)
     }
@@ -45,7 +63,7 @@ struct PanelView: View {
             Text("Quickrun")
                 .font(.headline)
             Spacer()
-            Button("Open App") { openMainWindow() }
+            Button(l10n.t(.openApp)) { openMainWindow() }
                 .buttonStyle(.bordered)
                 .controlSize(.small)
         }
@@ -59,7 +77,7 @@ struct PanelView: View {
     private var workspaceFilter: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 6) {
-                WorkspacePill(label: "All", color: nil, isSelected: filterRaw == "all") {
+                WorkspacePill(label: l10n.t(.all), color: nil, isSelected: filterRaw == "all") {
                     filterRaw = "all"
                 }
                 ForEach(workspaceStore.workspaces) { ws in
@@ -77,36 +95,101 @@ struct PanelView: View {
         }
     }
 
-    // MARK: - Actions grid
+    // MARK: - Group batch bar (start all / stop all)
 
-    private var actionsGrid: some View {
+    private var groupBar: some View {
+        let running = filteredActions.filter { runStore.isRunning(actionId: $0.id) }.count
+        return HStack(spacing: 8) {
+            Circle()
+                .fill(running > 0 ? Color.green : Color.secondary.opacity(0.35))
+                .frame(width: 8, height: 8)
+            Text(l10n.f(.runningCount, running, filteredActions.count))
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            Spacer()
+            Button {
+                runStore.startAll(actions: filteredActions)
+            } label: {
+                Label(l10n.t(.startAll), systemImage: "play.fill")
+            }
+            .buttonStyle(.bordered)
+            .controlSize(.small)
+            .tint(.green)
+            .disabled(running == filteredActions.count)
+
+            Button {
+                runStore.stopAll(actions: filteredActions)
+            } label: {
+                Label(l10n.t(.stopAll), systemImage: "stop.fill")
+            }
+            .buttonStyle(.bordered)
+            .controlSize(.small)
+            .tint(.red)
+            .disabled(running == 0)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+    }
+
+    // MARK: - Actions (cards grid or compact list)
+
+    @ViewBuilder
+    private var actionsContent: some View {
+        if filteredActions.isEmpty {
+            Text(actionStore.actions.isEmpty
+                 ? l10n.t(.noActionsYet)
+                 : l10n.t(.noActionsInWorkspace))
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+                .padding(.vertical, 20)
+        } else {
+            switch panelStyle {
+            case .cards: cardsGrid
+            case .list:  actionsList
+            }
+        }
+    }
+
+    private var cardsGrid: some View {
         Group {
-            if filteredActions.isEmpty {
-                Text(actionStore.actions.isEmpty
-                     ? "No actions yet.\nOpen Quickrun to add one."
-                     : "No actions in this workspace.")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
-                    .padding(.vertical, 20)
+            let grid = LazyVGrid(
+                columns: [GridItem(.adaptive(minimum: 82, maximum: 110), spacing: 8)],
+                spacing: 8
+            ) {
+                ForEach(filteredActions) { action in
+                    ActionTile(action: action)
+                }
+            }
+            .padding(12)
+
+            if filteredActions.count > 10 {
+                // Many actions: cap height and enable scroll
+                ScrollView { grid }.frame(maxHeight: 300)
             } else {
-                let grid = LazyVGrid(
-                    columns: [GridItem(.adaptive(minimum: 82, maximum: 110), spacing: 8)],
-                    spacing: 8
-                ) {
-                    ForEach(filteredActions) { action in
-                        ActionTile(action: action)
+                // Few actions: show everything, no scroll, panel grows naturally
+                grid
+            }
+        }
+    }
+
+    private var actionsList: some View {
+        Group {
+            let list = VStack(spacing: 0) {
+                ForEach(filteredActions) { action in
+                    ActionListRow(action: action)
+                    if action.id != filteredActions.last?.id {
+                        Divider().padding(.leading, 14)
                     }
                 }
-                .padding(12)
+            }
+            .padding(.vertical, 6)
 
-                if filteredActions.count > 10 {
-                    // Many actions: cap height and enable scroll
-                    ScrollView { grid }.frame(maxHeight: 300)
-                } else {
-                    // Few actions: show everything, no scroll, panel grows naturally
-                    grid
-                }
+            if filteredActions.count > 8 {
+                // Many actions: cap height and enable scroll
+                ScrollView { list }.frame(maxHeight: 320)
+            } else {
+                list
             }
         }
     }
@@ -116,13 +199,13 @@ struct PanelView: View {
     private var logsSection: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack {
-                Text("Logs")
+                Text(l10n.t(.logs))
                     .font(.caption)
                     .fontWeight(.semibold)
                     .foregroundStyle(.secondary)
                 Spacer()
                 if !runStore.runs.isEmpty {
-                    Button("See all") {
+                    Button(l10n.t(.seeAll)) {
                         NotificationCenter.default.post(name: .quickrunNavigateToRuns, object: nil)
                         openMainWindow()
                     }
@@ -136,7 +219,7 @@ struct PanelView: View {
             .padding(.bottom, 6)
 
             if runStore.runs.isEmpty {
-                Text("No runs yet.")
+                Text(l10n.t(.noRunsYet))
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .padding(.horizontal, 14)
@@ -200,12 +283,14 @@ private struct WorkspacePill: View {
     }
 }
 
-// MARK: - Action tile
+// MARK: - Action tile (cards mode)
 
+/// Cards mode: tap to start when idle, tap again to stop.
 private struct ActionTile: View {
     let action: Action
 
     @EnvironmentObject var runStore: RunStore
+    @EnvironmentObject var l10n:     LanguageManager
 
     private var isRunning: Bool { runStore.isRunning(actionId: action.id) }
     private var lastRun: Run? { runStore.runs.first { $0.actionId == action.id } }
@@ -253,7 +338,55 @@ private struct ActionTile: View {
             )
         }
         .buttonStyle(.plain)
-        .help(isRunning ? "Stop \(action.name)" : "Run \(action.name)")
+        .help(isRunning ? l10n.f(.stopAction, action.name) : l10n.f(.runAction, action.name))
+    }
+}
+
+// MARK: - Action row (list mode)
+
+/// List mode: one compact row per action with a start/stop icon reflecting state.
+private struct ActionListRow: View {
+    let action: Action
+
+    @EnvironmentObject var runStore: RunStore
+    @EnvironmentObject var l10n:     LanguageManager
+
+    private var isRunning: Bool { runStore.isRunning(actionId: action.id) }
+    private var lastRun: Run? { runStore.runs.first { $0.actionId == action.id } }
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Circle()
+                .fill(isRunning ? Color.green : Color.red.opacity(0.6))
+                .frame(width: 8, height: 8)
+
+            Text(action.name)
+                .font(.caption)
+                .fontWeight(.medium)
+                .lineLimit(1)
+
+            Spacer()
+
+            if let lastRun {
+                Text(lastRun.startedAt.shortLabel)
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+            }
+
+            Button { runStore.toggle(action: action) } label: {
+                Image(systemName: isRunning ? "stop.fill" : "play.fill")
+                    .font(.system(size: 10))
+                    .foregroundStyle(isRunning ? Color.red : Color.green)
+                    .frame(width: 22, height: 22)
+                    .background(
+                        Circle().fill((isRunning ? Color.red : Color.green).opacity(0.12))
+                    )
+            }
+            .buttonStyle(.plain)
+            .help(isRunning ? l10n.f(.stopAction, action.name) : l10n.f(.runAction, action.name))
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 5)
     }
 }
 
@@ -264,6 +397,8 @@ private struct RunLogRow: View {
     let log:        String
     let isExpanded: Bool
     let onToggle:   () -> Void
+
+    @EnvironmentObject var l10n: LanguageManager
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -294,7 +429,7 @@ private struct RunLogRow: View {
             if isExpanded {
                 let preview = lastLines(of: log, count: 7)
                 ScrollView {
-                    Text(preview.isEmpty ? "(no output)" : preview)
+                    Text(preview.isEmpty ? l10n.t(.noOutput) : preview)
                         .font(.system(size: 10, design: .monospaced))
                         .foregroundStyle(preview.isEmpty ? Color.secondary : Color.primary)
                         .frame(maxWidth: .infinity, alignment: .leading)

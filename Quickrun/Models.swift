@@ -19,7 +19,19 @@ enum WorkspaceColor: String, Codable, CaseIterable, Identifiable {
     case blue, green, orange, pink, purple, red, teal, yellow
 
     var id: String { rawValue }
-    var label: String { rawValue.capitalized }
+
+    var label: String {
+        switch self {
+        case .blue:   return L10n.t(.colorBlue)
+        case .green:  return L10n.t(.colorGreen)
+        case .orange: return L10n.t(.colorOrange)
+        case .pink:   return L10n.t(.colorPink)
+        case .purple: return L10n.t(.colorPurple)
+        case .red:    return L10n.t(.colorRed)
+        case .teal:   return L10n.t(.colorTeal)
+        case .yellow: return L10n.t(.colorYellow)
+        }
+    }
 
     var color: Color {
         switch self {
@@ -54,6 +66,9 @@ struct Action: Identifiable, Codable, Hashable {
     var name: String
     /// Full shell script content — may be multiline.
     var command: String
+    /// Optional script executed when the action is stopped.
+    /// nil/empty = simply send SIGTERM to the running process.
+    var stopCommand: String? = nil
     /// Shell used to execute the command.
     var shell: Shell = .bash
     /// Optional workspace this action belongs to.
@@ -69,6 +84,7 @@ struct Action: Identifiable, Codable, Hashable {
     init(
         name: String,
         command: String,
+        stopCommand: String? = nil,
         workspaceId: UUID? = nil,
         usesShellProfile: Bool = false,
         workingDirectory: String? = nil,
@@ -77,6 +93,7 @@ struct Action: Identifiable, Codable, Hashable {
     ) {
         self.name             = name
         self.command          = command
+        self.stopCommand      = stopCommand
         self.workspaceId      = workspaceId
         self.usesShellProfile = usesShellProfile
         self.workingDirectory = workingDirectory
@@ -105,10 +122,10 @@ enum RunStatus: String, Codable {
 
     var label: String {
         switch self {
-        case .running:  return "Running"
-        case .finished: return "Finished"
-        case .error:    return "Error"
-        case .killed:   return "Killed"
+        case .running:  return L10n.t(.statusRunning)
+        case .finished: return L10n.t(.statusFinished)
+        case .error:    return L10n.t(.statusError)
+        case .killed:   return L10n.t(.statusKilled)
         }
     }
 

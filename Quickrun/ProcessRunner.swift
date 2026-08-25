@@ -16,14 +16,32 @@ final class ProcessRunner {
     /// Starts the process for the given action.
     /// - Throws: if the executable cannot be launched.
     func start(action: Action) throws {
+        try start(
+            command:          action.command,
+            shell:            action.shell,
+            usesShellProfile: action.usesShellProfile,
+            workingDirectory: action.workingDirectory,
+            environment:      action.environment
+        )
+    }
+
+    /// Starts an arbitrary shell command (used for custom stop commands).
+    /// - Throws: if the executable cannot be launched.
+    func start(
+        command: String,
+        shell: Shell,
+        usesShellProfile: Bool,
+        workingDirectory: String?,
+        environment: [String: String]
+    ) throws {
         let proc = Process()
         let outputPipe = Pipe()
         let errorPipe = Pipe()
 
-        proc.executableURL = URL(fileURLWithPath: action.shell.executablePath)
+        proc.executableURL = URL(fileURLWithPath: shell.executablePath)
 
-        if action.usesShellProfile {
-            switch action.shell {
+        if usesShellProfile {
+            switch shell {
             case .bash:
                 // Non-interactive bash does NOT expand aliases by default and does NOT
                 // source ~/.bashrc automatically (login shell only reads ~/.bash_profile).
@@ -33,24 +51,24 @@ final class ProcessRunner {
                 [[ -f ~/.bash_profile ]] && source ~/.bash_profile
                 [[ -f ~/.bashrc ]]       && source ~/.bashrc
                 """
-                proc.arguments = ["-c", "\(preamble)\n\(action.command)"]
+                proc.arguments = ["-c", "\(preamble)\n\(command)"]
             case .zsh:
                 // zsh login shell sources ~/.zprofile + ~/.zshrc automatically.
                 // Also source ~/.bash_profile for tools that only write there.
                 let preamble = "[[ -f ~/.bash_profile ]] && source ~/.bash_profile"
-                proc.arguments = ["-l", "-c", "\(preamble)\n\(action.command)"]
+                proc.arguments = ["-l", "-c", "\(preamble)\n\(command)"]
             }
         } else {
-            proc.arguments = ["-c", action.command]
+            proc.arguments = ["-c", command]
         }
 
-        if let cwd = action.workingDirectory, !cwd.isEmpty {
+        if let cwd = workingDirectory, !cwd.isEmpty {
             proc.currentDirectoryURL = URL(fileURLWithPath: cwd)
         }
 
         // Inherit the current environment, then overlay action-specific vars
         var env = ProcessInfo.processInfo.environment
-        for (key, val) in action.environment { env[key] = val }
+        for (key, val) in environment { env[key] = val }
         proc.environment = env
 
         proc.standardOutput = outputPipe

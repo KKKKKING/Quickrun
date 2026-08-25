@@ -4,6 +4,8 @@ import SwiftUI
 struct WorkspacesView: View {
     @EnvironmentObject var workspaceStore: WorkspaceStore
     @EnvironmentObject var actionStore:    ActionStore
+    @EnvironmentObject var runStore:       RunStore
+    @EnvironmentObject var l10n:           LanguageManager
 
     @State private var isAdding    = false
     @State private var editingWs:  Workspace? = nil
@@ -16,10 +18,10 @@ struct WorkspacesView: View {
                 Image(systemName: "folder.fill")
                     .foregroundStyle(Color.accentColor)
                     .font(.title2)
-                Text("Workspaces").font(.title2).bold()
+                Text(l10n.t(.tabWorkspaces)).font(.title2).bold()
                 Spacer()
                 Button { isAdding = true } label: {
-                    Label("New Workspace", systemImage: "plus")
+                    Label(l10n.t(.newWorkspace), systemImage: "plus")
                 }
                 .buttonStyle(.borderedProminent)
             }
@@ -32,8 +34,8 @@ struct WorkspacesView: View {
                 VStack(spacing: 12) {
                     Image(systemName: "square.3.layers.3d")
                         .font(.system(size: 48)).foregroundStyle(.secondary)
-                    Text("No Workspaces").font(.title3).bold()
-                    Text("Group your actions into workspaces for quick filtering.")
+                    Text(l10n.t(.noWorkspaces)).font(.title3).bold()
+                    Text(l10n.t(.noWorkspacesHint))
                         .foregroundStyle(.secondary).multilineTextAlignment(.center)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -55,6 +57,9 @@ struct WorkspacesView: View {
                                         object:   nil,
                                         userInfo: ["workspaceId": ws.id]
                                     )
+                                },
+                                onStartAll: {
+                                    runStore.startAll(actions: actionStore.actions.filter { $0.workspaceId == ws.id })
                                 },
                                 onEdit:   { editingWs  = ws },
                                 onDelete: { deletingWs = ws }
@@ -92,14 +97,14 @@ struct WorkspacesView: View {
         .alert(item: $deletingWs) { ws in
             let count = actionStore.actions.filter { $0.workspaceId == ws.id }.count
             return Alert(
-                title: Text("Supprimer « \(ws.name) » ?"),
+                title: Text(l10n.f(.deleteWorkspaceTitle, ws.name)),
                 message: count == 0
-                    ? Text("Ce workspace sera définitivement supprimé.")
-                    : Text("Ce workspace contient \(count) action\(count == 1 ? "" : "s"). Elles seront dissociées du workspace."),
-                primaryButton: .destructive(Text("Supprimer")) {
+                    ? Text(l10n.t(.deleteWorkspaceEmpty))
+                    : Text(l10n.f(.deleteWorkspaceNonEmpty, count)),
+                primaryButton: .destructive(Text(l10n.t(.delete))) {
                     workspaceStore.delete(ws)
                 },
-                secondaryButton: .cancel(Text("Annuler"))
+                secondaryButton: .cancel(Text(l10n.t(.cancel)))
             )
         }
     }
@@ -112,8 +117,11 @@ private struct WorkspaceTile: View {
     let actionCount:  Int
     var isDropTarget: Bool = false
     let onNavigate:   () -> Void
+    let onStartAll:   () -> Void
     let onEdit:       () -> Void
     let onDelete:     () -> Void
+
+    @EnvironmentObject var l10n: LanguageManager
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -132,7 +140,7 @@ private struct WorkspaceTile: View {
                         .font(.system(size: 15))
                 }
                 .buttonStyle(.plain)
-                .help("Supprimer")
+                .help(l10n.t(.delete))
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 10)
@@ -144,7 +152,7 @@ private struct WorkspaceTile: View {
             Button(action: onNavigate) {
                 HStack {
                     Label(
-                        "\(actionCount) action\(actionCount == 1 ? "" : "s")",
+                        l10n.actionsCount(actionCount),
                         systemImage: "bolt.fill"
                     )
                     .font(.subheadline)
@@ -163,15 +171,30 @@ private struct WorkspaceTile: View {
 
             Divider()
 
-            // Footer: edit
-            Button(action: onEdit) {
-                Label("Modifier", systemImage: "pencil")
-                    .frame(maxWidth: .infinity)
-                    .font(.subheadline)
+            // Footer: start all + edit
+            HStack(spacing: 0) {
+                Button(action: onStartAll) {
+                    Label(l10n.t(.startAll), systemImage: "play.fill")
+                        .frame(maxWidth: .infinity)
+                        .font(.subheadline)
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(.green)
+                .padding(.vertical, 9)
+                .disabled(actionCount == 0)
+                .opacity(actionCount == 0 ? 0.4 : 1)
+
+                Divider().frame(height: 18)
+
+                Button(action: onEdit) {
+                    Label(l10n.t(.edit), systemImage: "pencil")
+                        .frame(maxWidth: .infinity)
+                        .font(.subheadline)
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(Color.accentColor)
+                .padding(.vertical, 9)
             }
-            .buttonStyle(.plain)
-            .foregroundStyle(Color.accentColor)
-            .padding(.vertical, 9)
         }
         .background(
             RoundedRectangle(cornerRadius: 10)
@@ -197,17 +220,23 @@ struct WorkspaceFormView: View {
     let mode: Mode
     let onSave: (Workspace) -> Void
 
+    @EnvironmentObject var l10n: LanguageManager
     @Environment(\.dismiss) private var dismiss
     @State private var name:  String         = ""
     @State private var color: WorkspaceColor = .blue
 
+    private var title: String {
+        if case .create = mode { return l10n.t(.newWorkspace) }
+        return l10n.t(.editWorkspaceTitle)
+    }
+
     var body: some View {
         VStack(spacing: 0) {
             HStack {
-                Text(mode.title).font(.title2).bold()
+                Text(title).font(.title2).bold()
                 Spacer()
-                Button("Cancel") { dismiss() }.keyboardShortcut(.escape)
-                Button("Save") {
+                Button(l10n.t(.cancel)) { dismiss() }.keyboardShortcut(.escape)
+                Button(l10n.t(.save)) {
                     var ws: Workspace
                     switch mode {
                     case .create:      ws = Workspace(name: name.trimmingCharacters(in: .whitespaces), color: color)
@@ -222,8 +251,8 @@ struct WorkspaceFormView: View {
             .padding(20)
             Divider()
             Form {
-                TextField("Name", text: $name)
-                Picker("Color", selection: $color) {
+                TextField(l10n.t(.nameLabel), text: $name)
+                Picker(l10n.t(.colorLabel), selection: $color) {
                     ForEach(WorkspaceColor.allCases) { c in
                         HStack {
                             Circle().fill(c.color).frame(width: 12, height: 12)
@@ -243,8 +272,3 @@ struct WorkspaceFormView: View {
     }
 }
 
-extension WorkspaceFormView.Mode {
-    var title: String {
-        switch self { case .create: return "New Workspace"; case .edit: return "Edit Workspace" }
-    }
-}

@@ -3,14 +3,15 @@ import SwiftUI
 /// Dedicated tab showing trashed actions that can be restored or permanently deleted.
 struct TrashView: View {
     @EnvironmentObject var actionStore: ActionStore
+    @EnvironmentObject var l10n:        LanguageManager
 
     var body: some View {
         VStack(spacing: 0) {
             HStack {
-                Text("Trash").font(.title2).bold()
+                Text(l10n.t(.tabTrash)).font(.title2).bold()
                 Spacer()
                 if !actionStore.trashedActions.isEmpty {
-                    Button("Empty Trash") { actionStore.emptyTrash() }
+                    Button(l10n.t(.emptyTrash)) { actionStore.emptyTrash() }
                         .foregroundStyle(.red)
                         .buttonStyle(.plain)
                 }
@@ -24,8 +25,8 @@ struct TrashView: View {
                 VStack(spacing: 12) {
                     Image(systemName: "trash")
                         .font(.system(size: 48)).foregroundStyle(.secondary)
-                    Text("Trash is Empty").font(.title3).bold()
-                    Text("Deleted actions will appear here.")
+                    Text(l10n.t(.trashEmptyTitle)).font(.title3).bold()
+                    Text(l10n.t(.trashEmptyHint))
                         .foregroundStyle(.secondary)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -41,11 +42,11 @@ struct TrashView: View {
                                     .font(.system(.caption, design: .monospaced))
                                     .foregroundStyle(.secondary)
                                     .lineLimit(1)
-                                Text("Deleted \(trashed.trashedAt.shortLabel)")
+                                Text(l10n.f(.deletedLabel, trashed.trashedAt.shortLabel))
                                     .font(.caption2).foregroundStyle(.tertiary)
                             }
                             Spacer()
-                            Button("Restore") { actionStore.restore(trashed) }
+                            Button(l10n.t(.restore)) { actionStore.restore(trashed) }
                                 .buttonStyle(.bordered)
                                 .controlSize(.small)
                             Button { actionStore.permanentlyDelete(trashed) } label: {
@@ -53,7 +54,7 @@ struct TrashView: View {
                                     .foregroundStyle(Color.red.opacity(0.7))
                             }
                             .buttonStyle(.plain)
-                            .help("Delete permanently")
+                            .help(l10n.t(.deletePermanently))
                         }
                         .padding(.vertical, 4)
                     }

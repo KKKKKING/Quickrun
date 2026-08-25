@@ -5,6 +5,7 @@ struct LogsView: View {
     let runId: UUID?
 
     @EnvironmentObject var runStore: RunStore
+    @EnvironmentObject var l10n:     LanguageManager
 
     private var logText: String {
         guard let id = runId else { return "" }
@@ -14,7 +15,7 @@ struct LogsView: View {
     var body: some View {
         ScrollViewReader { proxy in
             ScrollView(.vertical) {
-                Text(logText.isEmpty ? "No output yet." : logText)
+                Text(logText.isEmpty ? l10n.t(.noOutputYet) : logText)
                     .font(.system(.body, design: .monospaced))
                     .foregroundStyle(logText.isEmpty ? Color.secondary : Color.primary)
                     .textSelection(.enabled)

@@ -10,6 +10,7 @@ final class RunStore: ObservableObject {
     private(set) var logs: [UUID: String] = [:]
 
     private var runners:      [UUID: ProcessRunner] = [:]  // run.id  → runner
+    private var stoppers:     [UUID: ProcessRunner] = [:]  // run.id  → stop-command runner
     private var activeRunIds: [UUID: UUID]           = [:]  // action.id → run.id
 
     // MARK: - Public API
@@ -25,9 +26,24 @@ final class RunStore: ObservableObject {
     /// Start the action if idle, stop it if currently running.
     func toggle(action: Action) {
         if let runId = activeRunIds[action.id] {
-            runners[runId]?.stop()
+            stop(action: action, runId: runId)
         } else {
             launch(action: action)
+        }
+    }
+
+    /// Start every idle action in the list (workspace "start all").
+    func startAll(actions: [Action]) {
+        actions.filter { !isRunning(actionId: $0.id) }.forEach { launch(action: $0) }
+    }
+
+    /// Stop every running action in the list (workspace "stop all").
+    /// Each action's custom stop command is honored.
+    func stopAll(actions: [Action]) {
+        for action in actions {
+            if let runId = activeRunIds[action.id] {
+                stop(action: action, runId: runId)
+            }
         }
     }
 
@@ -43,6 +59,64 @@ final class RunStore: ObservableObject {
 
     // MARK: - Private
 
+    /// Stop a run: execute the action's custom stop command when configured,
+    /// otherwise fall back to SIGTERM. If the stop command returns and the main
+    /// process is still alive, SIGTERM is sent as a safety net.
+    private func stop(action: Action, runId: UUID) {
+        guard let runner = runners[runId] else { return }
+        // A stop command is already in flight for this run — ignore.
+        guard stoppers[runId] == nil else { return }
+
+        let stopCommand = action.stopCommand?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        guard !stopCommand.isEmpty else {
+            runner.stop()
+            return
+        }
+
+        appendLog(runId: runId, text: "\n[stop] \(stopCommand)\n")
+
+        let stopper = ProcessRunner()
+        stoppers[runId] = stopper
+
+        stopper.onOutput = { [weak self] text in
+            self?.appendLog(runId: runId, text: "[stop] \(text)")
+        }
+        stopper.onTermination = { [weak self, weak runner] code, _ in
+            guard let self else { return }
+            self.appendLog(runId: runId, text: "[stop] exited with code \(code)\n")
+            self.stoppers.removeValue(forKey: runId)
+            // Safety net: the stop command did not end the main process.
+            if let runner, runner.isRunning { runner.stop() }
+        }
+
+        do {
+            try stopper.start(
+                command:          stopCommand,
+                shell:            action.shell,
+                usesShellProfile: action.usesShellProfile,
+                workingDirectory: action.workingDirectory,
+                environment:      action.environment
+            )
+        } catch {
+            stoppers.removeValue(forKey: runId)
+            appendLog(runId: runId, text: "[stop] launch error: \(error.localizedDescription)\n")
+            runner.stop()
+            return
+        }
+
+        // Last resort: never let a hung stop command keep the run alive forever.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 15) { [weak stopper, weak runner] in
+            if stopper?.isRunning == true { stopper?.stop() }
+            if runner?.isRunning == true { runner?.stop() }
+        }
+    }
+
+    private func appendLog(runId: UUID, text: String) {
+        // Manually trigger objectWillChange because dictionary mutations
+        // are not automatically detected by @Published.
+        objectWillChange.send()
+        logs[runId, default: ""] += text
+    }
     private func launch(action: Action) {
         let run = Run(
             actionId:   action.id,
@@ -60,11 +134,7 @@ final class RunStore: ObservableObject {
         runners[runId] = runner
 
         runner.onOutput = { [weak self] text in
-            guard let self else { return }
-            // Manually trigger objectWillChange because dictionary mutations
-            // are not automatically detected by @Published.
-            self.objectWillChange.send()
-            self.logs[runId, default: ""] += text
+            self?.appendLog(runId: runId, text: text)
         }
 
         runner.onTermination = { [weak self] code, status in
