@@ -7,24 +7,26 @@ on:
 
 jobs:
   build:
-    name: Build Quickrun
-    runs-on: macos-latest
+    name: Build Quickrun Universal
+    runs-on: macos‑latest
     steps:
       - name: Checkout source
         uses: actions/checkout@v4
 
-      - name: Xcode build
+      - name: Xcode build Universal(arm64 + x86_64)
         run: |
           xcodebuild \
             -project Quickrun.xcodeproj \
             -scheme Quickrun \
             -configuration Release \
+            -derivedDataPath ./build \
             clean build \
+            ARCHS="arm64 x86_64" \
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_ALLOWED=NO
 
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
-          name: Quickrun-Release-App
+          name: Quickrun‑Universal‑App
           path: ./build/Build/Products/Release/Quickrun.app
